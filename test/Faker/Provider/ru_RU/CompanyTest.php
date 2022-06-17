@@ -76,6 +76,13 @@ final class CompanyTest extends TestCase
         self::assertSame($isValid, $this->faker->inn10IsValid($inn10), $inn10);
     }
 
+    public function testOgrn13()
+    {
+        $this->assertMatchesRegularExpression('/^[0-9]{13}$/', $this->faker->ogrn13);
+        $this->assertEquals("77", substr($this->faker->ogrn13("77"), 3, 2));
+        $this->assertEquals("02", substr($this->faker->ogrn13(2), 3, 2));
+    }
+
     protected function getProviders(): iterable
     {
         yield new Company($this->faker);

@@ -110,9 +110,9 @@ class Person extends \Faker\Provider\Person
     /**
      * Return male middle name
      *
+     * @return string Middle name
      * @example 'Иванович'
      *
-     * @return string Middle name
      */
     public function middleNameMale()
     {
@@ -122,9 +122,9 @@ class Person extends \Faker\Provider\Person
     /**
      * Return female middle name
      *
+     * @return string Middle name
      * @example 'Ивановна'
      *
-     * @return string Middle name
      */
     public function middleNameFemale()
     {
@@ -176,5 +176,111 @@ class Person extends \Faker\Provider\Person
         }
 
         return $lastName . static::randomElement(static::$lastNameSuffix);
+    }
+
+    /**
+     * Generates INN Checksum
+     * @see https://ru.wikipedia.org/wiki/%D0%98%D0%B4%D0%B5%D0%BD%D1%82%D0%B8%D1%84%D0%B8%D0%BA%D0%B0%D1%86%D0%B8%D0%BE%D0%BD%D0%BD%D1%8B%D0%B9_%D0%BD%D0%BE%D0%BC%D0%B5%D1%80_%D0%BD%D0%B0%D0%BB%D0%BE%D0%B3%D0%BE%D0%BF%D0%BB%D0%B0%D1%82%D0%B5%D0%BB%D1%8C%D1%89%D0%B8%D0%BA%D0%B0
+     * Example of validation: http://www.kholenkov.ru/data-validation/inn/
+     * @param string|null $areaCode
+     * @return string
+     */
+    public static function inn12(?string $areaCode = ''): string
+    {
+        if ($areaCode === '' || intval($areaCode) == 0) {
+            //Simple generation code for areas in Russian without check for valid
+            $areaCode = static::numberBetween(1, 91);
+        } else {
+            $areaCode = intval($areaCode);
+        }
+        $areaCode = str_pad($areaCode, 2, '0', STR_PAD_LEFT);
+        $innBase = $areaCode . static::numerify('########');
+        return $innBase . self::inn12Checksum($innBase);
+    }
+
+    public static function inn12Checksum($inn): string
+    {
+        $multipliers1 = [
+            1 => 7,
+            2 => 2,
+            3 => 4,
+            4 => 10,
+            5 => 3,
+            6 => 5,
+            7 => 9,
+            8 => 4,
+            9 => 6,
+            10 => 8
+        ];
+        $sum1 = 0;
+        for ($i = 1; $i <= 10; $i++) {
+            $sum1 += intval(substr($inn, $i - 1, 1)) * $multipliers1[$i];
+        }
+        $n11 = strval(($sum1 % 11) % 10);
+        $inn .= $n11;
+
+        $multipliers2 = [
+            1 => 3,
+            2 => 7,
+            3 => 2,
+            4 => 4,
+            5 => 10,
+            6 => 3,
+            7 => 5,
+            8 => 9,
+            9 => 4,
+            10 => 6,
+            11 => 8
+        ];
+        $sum2 = 0;
+        for ($i = 1; $i <= 11; $i++) {
+            $sum2 += intval(substr($inn, $i - 1, 1)) * $multipliers2[$i];
+        }
+        $n12 = strval(($sum2 % 11) % 10);
+        return $n11 . $n12;
+    }
+
+    /**
+     * Checks whether an INN has a valid checksum
+     *
+     * @param string $inn
+     *
+     * @return bool
+     */
+    public static function inn12IsValid(string $inn): bool
+    {
+        $checksum = self::inn12Checksum($inn);
+        return
+            substr($checksum, 0, 1) === substr($inn, 10, 1) &&
+            substr($checksum, 1, 1) === substr($inn, 11, 1);
+    }
+
+    /**
+     * Example of validation: http://www.kholenkov.ru/data-validation/ogrnip/
+     * @param string|null $areaCode
+     * @return string
+     */
+    public function ogrn15(?string $areaCode = ''): string
+    {
+        if ($areaCode === '' || intval($areaCode) == 0) {
+            //Simple generation code for areas in Russian without check for valid
+            $areaCode = static::numberBetween(1, 91);
+        } else {
+            $areaCode = intval($areaCode);
+        }
+        $year = substr(
+            date(
+                'Y',
+                strtotime(
+                    '-' . rand(1, 30) . 'years'
+                )
+            ),
+            -2
+        );
+        $region = str_pad($areaCode, 2, '0', STR_PAD_LEFT);
+        $tail = str_pad(static::numberBetween(1, 999999999), 9, '0', STR_PAD_LEFT);
+        $result = '3' . $year . $region . $tail;
+        $n14 = strval(($result % 13) % 10);
+        return $result . $n14;
     }
 }
